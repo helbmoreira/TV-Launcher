@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Meu Launcher</string>
+    <string name="app_name">TV Launcher</string>
     <string name="wifi">Wi-Fi</string>
     <string name="settings">Configurações</string>
-</resources>
+    <string name="manage_apps">Gerenciar aplicativos visíveis</string>\n</resources>

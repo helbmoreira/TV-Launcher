@@ -1,6 +1,7 @@
 package com.example.tvlauncher
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -23,13 +24,14 @@ class MainActivity : Activity() {
         /** Quantidade de colunas da grade. */
         private const val COLUMNS = 4
 
-        /** Pacotes que você não quer ver na grade. Ex.: setOf("com.amazon.tv.launcher") */
-        private val HIDDEN_PACKAGES = setOf<String>()
+        private const val PREFS = "launcher_preferences"
+        private const val HIDDEN_APPS = "hidden_packages"
     }
 
     private lateinit var recycler: RecyclerView
     private lateinit var wifiButton: ImageButton
-    private val adapter = AppAdapter(::launch, ::showAppInfo)
+    private val adapter = AppAdapter(::launch, ::showAppActions)
+    private var allApps: List<AppEntry> = emptyList()
     private val worker = Executors.newSingleThreadExecutor()
 
     private val packageReceiver = object : BroadcastReceiver() {
@@ -53,6 +55,7 @@ class MainActivity : Activity() {
         wifiButton = findViewById(R.id.wifi)
         wifiButton.setOnClickListener { openWifiSettings() }
         findViewById<ImageButton>(R.id.settings).setOnClickListener { openSettings() }
+        findViewById<ImageButton>(R.id.manageApps).setOnClickListener { manageHiddenApps() }
 
         val pkgFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -107,7 +110,7 @@ class MainActivity : Activity() {
                 for (info in pm.queryIntentActivities(query, 0)) {
                     val ai = info.activityInfo ?: continue
                     val pkg = ai.packageName
-                    if (pkg == packageName || pkg in HIDDEN_PACKAGES || found.containsKey(pkg)) continue
+                    if (pkg == packageName || found.containsKey(pkg)) continue
 
                     val launch = Intent(Intent.ACTION_MAIN)
                         .addCategory(category)
@@ -126,7 +129,8 @@ class MainActivity : Activity() {
 
             val sorted = found.values.sortedBy { it.label.lowercase() }
             runOnUiThread {
-                adapter.submit(sorted)
+                allApps = sorted
+                adapter.submit(sorted.filter { it.packageName !in hiddenPackages() })
                 focusFirstApp()
             }
         }
@@ -146,11 +150,63 @@ class MainActivity : Activity() {
         }
     }
 
-    /** Pressionar e segurar abre as informações do app (onde dá para desinstalar). */
+    /** Pressionar e segurar mostra opções para ocultar ou abrir informações do aplicativo. */
+    private fun showAppActions(app: AppEntry) {
+        AlertDialog.Builder(this)
+            .setTitle(app.label)
+            .setItems(arrayOf("Ocultar da tela inicial", "Informações do aplicativo", "Cancelar")) { _, which ->
+                when (which) {
+                    0 -> {
+                        val hidden = hiddenPackages().toMutableSet()
+                        hidden.add(app.packageName)
+                        saveHiddenPackages(hidden)
+                        refreshVisibleApps()
+                    }
+                    1 -> showAppInfo(app)
+                }
+            }
+            .show()
+    }
+
     private fun showAppInfo(app: AppEntry) {
         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
             .setData(Uri.fromParts("package", app.packageName, null))
         try { startActivity(intent) } catch (_: ActivityNotFoundException) { }
+    }
+
+    private fun hiddenPackages(): Set<String> =
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getStringSet(HIDDEN_APPS, emptySet())?.toSet() ?: emptySet()
+
+    private fun saveHiddenPackages(packages: Set<String>) {
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putStringSet(HIDDEN_APPS, packages.toSet()).apply()
+    }
+
+    private fun refreshVisibleApps() {
+        adapter.submit(allApps.filter { it.packageName !in hiddenPackages() })
+        focusFirstApp()
+    }
+
+    /** Permite marcar/desmarcar apps ocultos sem desinstalá-los. */
+    private fun manageHiddenApps() {
+        if (allApps.isEmpty()) return
+        val labels = allApps.map { it.label }.toTypedArray()
+        val hidden = hiddenPackages().toMutableSet()
+        val checked = BooleanArray(allApps.size) { allApps[it].packageName in hidden }
+
+        AlertDialog.Builder(this)
+            .setTitle("Aplicativos visíveis")
+            .setMultiChoiceItems(labels, checked) { _, which, isChecked ->
+                val pkg = allApps[which].packageName
+                if (isChecked) hidden.remove(pkg) else hidden.add(pkg)
+            }
+            .setPositiveButton("Salvar") { _, _ ->
+                saveHiddenPackages(hidden)
+                refreshVisibleApps()
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
     // ---------- Barra superior ----------

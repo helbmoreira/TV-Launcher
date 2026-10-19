@@ -29,6 +29,19 @@
         android:orientation="horizontal">
 
         <ImageButton
+            android:id="@+id/manageApps"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/btn_round"
+            android:contentDescription="Gerenciar aplicativos visíveis"
+            android:defaultFocusHighlightEnabled="false"
+            android:padding="11dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_apps"
+            android:tint="@color/btn_icon_tint" />
+
+        <ImageButton
             android:id="@+id/wifi"
             android:layout_width="48dp"
             android:layout_height="48dp"

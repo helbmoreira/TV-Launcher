@@ -3,5 +3,8 @@
         <item name="android:windowBackground">@drawable/bg_wallpaper</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:colorAccent">#DCEBFF</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowActionModeOverlay">true</item>
     </style>
 </resources>
