@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Meu Launcher</string>
+    <string name="wifi">Wi-Fi</string>
+    <string name="settings">Configurações</string>
+</resources>
